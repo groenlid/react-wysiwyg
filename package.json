@@ -13,9 +13,6 @@
     "textarea",
     "forms"
   ],
-  "peerDependencies": {
-    "react": ">=0.12.0"
-  },
   "author": "Ben McMahen",
   "license": "MIT",
   "repository": {
