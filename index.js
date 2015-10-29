@@ -30,6 +30,8 @@ var ContentEditable = React.createClass({
     onEscapeKey: React.PropTypes.func,
     preventStyling: React.PropTypes.bool,
     noLinebreaks: React.PropTypes.bool,
+    onBlur: React.PropTypes.func,
+    onFocus: React.PropTypes.func,
     onBold: React.PropTypes.func,
     onItalic: React.PropTypes.func,
     onKeyDown: React.PropTypes.func,
@@ -126,6 +128,8 @@ var ContentEditable = React.createClass({
       tabIndex: 0,
       className: classNames(classes),
       contentEditable: editing,
+      onBlur: this.onBlur,
+      onFocus: this.onFocus,
       onKeyDown: this.onKeyDown,
       onPaste: this.onPaste,
       onMouseDown: this.onMouseDown,
@@ -153,17 +157,6 @@ var ContentEditable = React.createClass({
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
-  },
-
-  setCursorToEnd: function() {
-    var el = React.findDOMNode(this)
-    el.focus()
-    var range = document.createRange()
-    range.selectNodeContents(el)
-    range.collapse(false)
-    var sel = window.getSelection()
-    sel.removeAllRanges()
-    sel.addRange(range)
   },
 
   contentIsEmpty: function (content) {
@@ -224,6 +217,9 @@ var ContentEditable = React.createClass({
         if (this.props.preventStyling) {
           return prev()
         }
+      //paste
+      } else if (key === 86) {
+        return;
       }
     }
 
@@ -273,16 +269,28 @@ var ContentEditable = React.createClass({
     }
   },
 
+  _replaceCurrentSelection: function(data) {
+    var selection = window.getSelection();
+    var range = selection.getRangeAt(0);
+    range.deleteContents();
+    var fragment = range.createContextualFragment('');
+    fragment.textContent = data;
+    var replacementEnd = fragment.lastChild;
+    range.insertNode(fragment);
+    // Set cursor at the end of the replaced content, just like browsers do.
+    range.setStartAfter(replacementEnd);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  },
+
   onPaste: function(e){
     // handle paste manually to ensure we unset our placeholder
     e.preventDefault();
     var data = e.clipboardData.getData('text/plain')
-    this.props.onChange(escapeHTML(data), false, data)
-    // a bit hacky. set cursor to end of contents
-    // after the paste, which is async
-    setTimeout(function(){
-      this.setCursorToEnd()
-    }.bind(this), 0)
+    this._replaceCurrentSelection(data);
+    var target = React.findDOMNode(this)
+    this.props.onChange(target.textContent, false, target.innerHTML)
   },
 
   onKeyPress: function(e){
@@ -320,6 +328,18 @@ var ContentEditable = React.createClass({
     }
 
     this.props.onChange(escapeHTML(e.target.textContent), false, e.target.innerHTML)
+  },
+
+  onBlur: function(e) {
+      if (this.props.onBlur) {
+          this.props.onBlur(e);
+      }
+  },
+
+  onFocus: function(e) {
+      if (this.props.onFocus) {
+          this.props.onFocus(e);
+      }
   }
 
 });
